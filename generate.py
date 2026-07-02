@@ -1,5 +1,6 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from patchedQwen import kvPatchedAutoModelForCausalLM
 import numpy as np
 
 
