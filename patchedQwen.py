@@ -40,7 +40,15 @@ class kvPatchedQwen2Attention(Qwen2Attention):
 		#################################
 		########## patched code below
 
-		# kv_cache_manager.write_cache()
+		sequence_manager.get_next_slot(?seq_id?)
+
+		kv_cache_manager.write_cache(
+			self.layer_idx,
+			keyOrValue,
+			blockid,
+			slotid,
+			vector
+		)
 
 		# kv_cache_manager.read_cache()
 
