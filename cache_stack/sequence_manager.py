@@ -20,6 +20,14 @@ class SequenceManager:
         new_block_id = self.block_allocator.allocate()
         self.block_table[sequence_id].append(new_block_id)
 
+    def init_sequence_with_prefix(self, sequence_id, cached_block_ids, n_cached_tokens):
+        """Seed a sequence's block table with pre-cached blocks."""
+        assert sequence_id not in self.block_table
+        # Allocate at least one writable block for the remaining tokens.
+        new_block_id = self.block_allocator.allocate()
+        self.block_table[sequence_id] = list(cached_block_ids) + [new_block_id]
+        self.token_counts[sequence_id] = n_cached_tokens
+
     def free_sequence(self, sequence_id):
         for block_id in self.block_table[sequence_id]:
             self.block_allocator.free(block_id)
