@@ -1,56 +1,38 @@
 from .block_allocator import BlockAllocator
-
-MAX_BLOCKS = 10
-BLOCK_SIZE = 5
+from .config import MAX_BLOCKS, BLOCK_SIZE
 
 
 class SequenceManager:
-	def __init__(self):
-		self.block_table = {}
-		self.token_counts = {}
-		self.block_allocator = BlockAllocator(MAX_BLOCKS)
+    def __init__(self, max_blocks=MAX_BLOCKS, block_size=BLOCK_SIZE):
+        self.block_size = block_size
+        self.block_table = {}
+        self.token_counts = {}
+        self.block_allocator = BlockAllocator(max_blocks)
 
-	def init_sequence(self, sequenceID):
-		# make sure sequence doesn't already exist
-		assert sequenceID not in self.block_table
+    def init_sequence(self, sequence_id):
+        assert sequence_id not in self.block_table
+        new_block_id = self.block_allocator.allocate()
+        self.block_table[sequence_id] = [new_block_id]
+        self.token_counts[sequence_id] = 0
 
-		# allocate a new block and initialize the dict
-		new_block_id = self.block_allocator.allocate()
-		self.block_table[sequenceID] = [new_block_id]
+    def extend_sequence(self, sequence_id):
+        assert sequence_id in self.block_table
+        new_block_id = self.block_allocator.allocate()
+        self.block_table[sequence_id].append(new_block_id)
 
-		# keep track of token count for this sequence id
-		self.token_counts[sequenceID] = 0
+    def free_sequence(self, sequence_id):
+        for block_id in self.block_table[sequence_id]:
+            self.block_allocator.free(block_id)
+        del self.block_table[sequence_id]
+        del self.token_counts[sequence_id]
 
-	def extend_sequence(self, sequenceID):
-		# make sure sequence already exists before extending
-		assert sequenceID in self.block_table
+    def get_next_slot(self, sequence_id):
+        num_tokens = self.token_counts[sequence_id]
+        slot_id = num_tokens % self.block_size
 
-		# allocate a new block and append
-		new_block_id = self.block_allocator.allocate()		
-		self.block_table[sequenceID].append(new_block_id)
+        if slot_id == 0 and num_tokens > 0:
+            self.extend_sequence(sequence_id)
 
-	def free_sequence(self, sequenceID):
-		for blockId in self.block_table[sequenceID]:
-			self.block_allocator.free(blockId)
-		del self.block_table[sequenceID]
-		del self.token_counts[sequenceID]
-
-	def get_next_slot(self, sequenceID):
-		num_tokens = self.token_counts[sequenceID]
-
-		# get the slot id - index within block
-		slot_id = num_tokens % BLOCK_SIZE
-
-		# if block is filled then new block needs to be allocated
-		if slot_id == 0 and num_tokens > 0:
-			self.extend_sequence(sequenceID)
-
-		# get the block index
-		block_id = self.block_table[sequenceID][num_tokens // BLOCK_SIZE]
-
-		self.token_counts[sequenceID] += 1
-		return (block_id, slot_id)
-
-
-
-
+        block_id = self.block_table[sequence_id][num_tokens // self.block_size]
+        self.token_counts[sequence_id] += 1
+        return (block_id, slot_id)
